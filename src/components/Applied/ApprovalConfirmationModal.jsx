@@ -1,0 +1,237 @@
+import React, { useState, useEffect } from "react";
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Typography,
+  CircularProgress,
+  Alert,
+  useTheme,
+  Box,
+  Snackbar,
+} from "@mui/material";
+import { styled } from "@mui/material/styles";
+import { motion } from "framer-motion";
+import axios from "axios";
+import { BASE_URL } from "../../services/configUrls";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import api from "../../services/api";
+
+// Styled components
+const StyledDialogTitle = styled(DialogTitle)(({ theme }) => ({
+  background: "linear-gradient(90deg, #f5f7fa 0%, #e4e8eb 100%)",
+  display: "flex",
+  alignItems: "center",
+  gap: theme.spacing(1),
+  padding: theme.spacing(1.5),
+}));
+
+const StyledDialogContent = styled(DialogContent)(({ theme }) => ({
+  padding: theme.spacing(3),
+  paddingTop: theme.spacing(2.5),
+  minWidth: "350px",
+  [theme.breakpoints.down("sm")]: {
+    minWidth: "100%",
+  },
+}));
+
+const ApprovalConfirmationModal = ({
+  open,
+  onClose,
+  student,
+  onDataRefresh,
+}) => {
+  const theme = useTheme();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(false);
+  const [showSnackbar, setShowSnackbar] = useState(false);
+
+  // Reset state when modal opens/closes or student changes
+  useEffect(() => {
+    if (open && student) {
+      setError(null);
+      setSuccess(false);
+    }
+  }, [open, student]);
+
+  const handleApprove = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Get the access token from local storage
+      const accessToken = localStorage.getItem("accessToken");
+
+      if (!accessToken) {
+        setError("Authentication token not found");
+        setLoading(false);
+        return;
+      }
+
+      // Prepare request payload
+      const requestPayload = {
+        status: 1, // Assuming 1 is the ID for "Approved" status
+      };
+
+      // Make API call to approve student
+      const response = await api.put(
+        `${BASE_URL}/internship/spoc/approval/${student.internship_id}`,
+        requestPayload,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      // Check response
+      if (response.data && response.status === 200) {
+        setSuccess(true);
+        setShowSnackbar(true);
+
+        // Close modal and refresh data after successful update
+        if (onDataRefresh) {
+          setTimeout(() => {
+            onClose();
+            onDataRefresh();
+          }, 1000); // Short delay to show success message
+        }
+      } else {
+        setError("Failed to approve student");
+      }
+    } catch (err) {
+      console.error("Error approving student:", err);
+      setError(err.response?.data?.detail || "Failed to approve student");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSnackbarClose = () => {
+    setShowSnackbar(false);
+  };
+
+  return (
+    <>
+      <Dialog
+        open={open}
+        onClose={onClose}
+        fullWidth
+        maxWidth="xs"
+        PaperProps={{
+          component: motion.div,
+          initial: { opacity: 0, y: 50 },
+          animate: { opacity: 1, y: 0 },
+          exit: { opacity: 0, y: 50 },
+          transition: { duration: 0.25, ease: "easeOut" },
+          sx: {
+            borderRadius: "12px",
+            overflow: "hidden",
+            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)",
+          },
+        }}
+      >
+        <StyledDialogTitle>
+          <CheckCircleIcon color="success" fontSize="small" />
+          <Typography variant="subtitle1" component="div" fontWeight={600}>
+            Approve Student
+          </Typography>
+        </StyledDialogTitle>
+
+        <StyledDialogContent>
+          {error && (
+            <Alert
+              severity="error"
+              sx={{ mb: 2.5, animation: "fadeIn 0.3s ease-in-out" }}
+              size="small"
+            >
+              {error}
+            </Alert>
+          )}
+
+          <Box sx={{ mt: 1 }}>
+            <Typography variant="body2">
+              Are you sure you want to approve <strong>{student?.name}</strong>{" "}
+              for the internship?
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
+              This action will update their status to "Approved" and they will
+              be notified.
+            </Typography>
+          </Box>
+        </StyledDialogContent>
+
+        <DialogActions
+          sx={{
+            px: 2,
+            pb: 2,
+            pt: 0,
+            display: "flex",
+            justifyContent: "flex-end",
+            gap: 1,
+          }}
+        >
+          <Button
+            onClick={onClose}
+            color="inherit"
+            size="small"
+            disabled={loading}
+            sx={{
+              borderRadius: "8px",
+              textTransform: "none",
+              fontWeight: 500,
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleApprove}
+            color="success"
+            variant="contained"
+            size="small"
+            disabled={loading || success}
+            startIcon={
+              loading ? <CircularProgress size={16} color="inherit" /> : null
+            }
+            sx={{
+              color: "#fff",
+              borderRadius: "8px",
+              background: "linear-gradient(45deg, #2e7d32 30%, #4caf50 90%)",
+              boxShadow: "0 4px 10px rgba(76, 175, 80, 0.3)",
+              textTransform: "none",
+              fontWeight: 600,
+              "&:hover": {
+                background: "linear-gradient(45deg, #286c2b 30%, #43a047 90%)",
+                boxShadow: "0 6px 12px rgba(76, 175, 80, 0.4)",
+              },
+            }}
+          >
+            {loading ? "Approving..." : "Approve"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Success notification outside the modal */}
+      <Snackbar
+        open={showSnackbar}
+        autoHideDuration={4000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={handleSnackbarClose}
+          severity="success"
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          Student approved successfully!
+        </Alert>
+      </Snackbar>
+    </>
+  );
+};
+
+export default ApprovalConfirmationModal;

@@ -1,0 +1,1001 @@
+import React, { useState, useEffect } from "react";
+import { useSelector } from "react-redux"; // Add this import
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Box,
+  Typography,
+  IconButton,
+  TextField,
+  InputAdornment,
+  Chip,
+  useTheme,
+  CircularProgress,
+  useMediaQuery,
+  Skeleton,
+  Menu,
+  MenuItem,
+  Button,
+  Tooltip,
+  Checkbox,
+} from "@mui/material";
+import {
+  Search as SearchIcon,
+  FilterList as FilterListIcon,
+  MoreVert as MoreVertIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
+  SwapHoriz as SwapIcon,
+  Edit as EditIcon,
+  CalendarMonth as CalendarIcon,
+  School as SchoolIcon,
+  CheckCircle as ApproveIcon,
+  Cancel as RejectIcon,
+  DoneAll as DoneAllIcon,
+  BlockOutlined as BlockIcon,
+} from "@mui/icons-material";
+import { styled } from "@mui/material/styles";
+import { motion, AnimatePresence } from "framer-motion";
+import DomainChangeModal from "./DomainChangeModal";
+import ApprovalConfirmationModal from "./ApprovalConfirmationModal";
+import RejectionConfirmationModal from "./RejectionConfirmationModal";
+import BulkApprovalConfirmationModal from "./BulkApprovalConfirmationModal";
+import BulkRejectionConfirmationModal from "./BulkRejectionConfirmationModal";
+import CustomPagination from "./CustomPagination"; // Import the new CustomPagination component
+
+// Styled components (unchanged)
+const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
+  borderRadius: theme.spacing(1),
+  boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
+  marginTop: theme.spacing(2),
+  overflow: "auto",
+}));
+
+const StyledTableHead = styled(TableHead)(({ theme }) => ({
+  background: "linear-gradient(90deg, #f5f7fa 0%, #e4e8eb 100%)",
+}));
+
+const StyledTableHeadCell = styled(TableCell)(({ theme }) => ({
+  fontWeight: 600,
+  color: theme.palette.text.primary,
+  padding: theme.spacing(1),
+  fontSize: "0.75rem",
+  whiteSpace: "nowrap",
+  "&:first-of-type": {
+    paddingLeft: theme.spacing(2),
+  },
+}));
+
+const StyledTableCell = styled(TableCell)(({ theme }) => ({
+  padding: theme.spacing(1),
+  fontSize: "0.75rem",
+  whiteSpace: "nowrap",
+  "&:first-of-type": {
+    paddingLeft: theme.spacing(2),
+  },
+}));
+
+const NonTruncatedTableCell = styled(StyledTableCell)(({ theme }) => ({
+  whiteSpace: "nowrap",
+}));
+
+const StyledTableRow = styled(TableRow)(({ theme }) => ({
+  "&:nth-of-type(odd)": {
+    backgroundColor: theme.palette.action.hover,
+  },
+  "&:last-child td, &:last-child th": {
+    border: 0,
+  },
+  transition: "background-color 0.2s ease",
+  "&:hover": {
+    backgroundColor: theme.palette.action.selected,
+  },
+  height: "48px",
+}));
+
+const SearchWrapper = styled(Box)(({ theme }) => ({
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: theme.spacing(1),
+}));
+
+const NoDataWrapper = styled(Box)(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: theme.spacing(3),
+  color: theme.palette.text.secondary,
+}));
+
+const MobileExpandableRow = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(1),
+  backgroundColor: theme.palette.action.hover,
+  borderTop: `1px solid ${theme.palette.divider}`,
+}));
+
+const DetailItem = styled(Box)(({ theme }) => ({
+  display: "flex",
+  margin: theme.spacing(0.5, 0),
+  "& .label": {
+    fontWeight: 500,
+    marginRight: theme.spacing(1),
+    color: theme.palette.text.secondary,
+    fontSize: "0.75rem",
+  },
+  "& .value": {
+    fontSize: "0.75rem",
+  },
+}));
+
+const TableControlsContainer = styled(Box)(({ theme }) => ({
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: theme.spacing(1),
+  [theme.breakpoints.down("sm")]: {
+    flexDirection: "column",
+    alignItems: "stretch",
+    gap: theme.spacing(1),
+  },
+}));
+
+const SearchFieldContainer = styled(Box)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  width: "100%",
+  maxWidth: "300px",
+  [theme.breakpoints.down("sm")]: {
+    maxWidth: "100%",
+  },
+}));
+
+const ApproveButton = styled(Button)(({ theme }) => ({
+  borderRadius: "8px",
+  fontSize: "0.75rem",
+  fontWeight: 600,
+  boxShadow: "0 2px 8px rgba(76, 175, 80, 0.2)",
+  background: "linear-gradient(45deg, #43a047 30%, #66bb6a 90%)",
+  "&:hover": {
+    boxShadow: "0 4px 12px rgba(76, 175, 80, 0.3)",
+    background: "linear-gradient(45deg, #388e3c 30%, #56a85a 90%)",
+  },
+  "&:disabled": {
+    background: "rgba(0, 0, 0, 0.12)",
+    color: "rgba(0, 0, 0, 0.26)",
+    boxShadow: "none",
+  },
+  height: "36px",
+  [theme.breakpoints.down("sm")]: {
+    width: "100%",
+  },
+}));
+
+const RejectButton = styled(Button)(({ theme }) => ({
+  borderRadius: "8px",
+  fontSize: "0.75rem",
+  fontWeight: 600,
+  boxShadow: "0 2px 8px rgba(244, 67, 54, 0.2)",
+  background: "linear-gradient(45deg, #d32f2f 30%, #f44336 90%)",
+  "&:hover": {
+    boxShadow: "0 4px 12px rgba(244, 67, 54, 0.3)",
+    background: "linear-gradient(45deg, #c62828 30%, #ef5350 90%)",
+  },
+  "&:disabled": {
+    background: "rgba(0, 0, 0, 0.12)",
+    color: "rgba(0, 0, 0, 0.26)",
+    boxShadow: "none",
+  },
+  height: "36px",
+  [theme.breakpoints.down("sm")]: {
+    width: "100%",
+  },
+}));
+
+const getStatusChipColor = (status) => {
+  switch (status) {
+    case "Applied":
+      return "primary";
+    case "Approved":
+      return "success";
+    case "Rejected":
+      return "error";
+    case "Pending":
+      return "warning";
+    default:
+      return "default";
+  }
+};
+
+const ResultsTable = ({
+  searchParams,
+  data = [],
+  loading = false,
+  totalCount = 0,
+  page = 0,
+  rowsPerPage = 5,
+  onPageChange,
+  onRowsPerPageChange,
+  onSearchTermChange,
+  filterOptions = { domains: [], branches: [] },
+  onDataRefresh,
+}) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const isTablet = useMediaQuery(theme.breakpoints.down("md"));
+  const [expandedRow, setExpandedRow] = useState(null);
+  const [selectedStudents, setSelectedStudents] = useState([]);
+
+  // Get user role from Redux store
+  const userRole = useSelector((state) => state.authorise.userRole);
+  const isLeaderRole = userRole === "leaders";
+
+  // Menu state
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+
+  // Modal states
+  const [domainModalOpen, setDomainModalOpen] = useState(false);
+  const [approveModalOpen, setApproveModalOpen] = useState(false);
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [bulkApproveModalOpen, setBulkApproveModalOpen] = useState(false);
+  const [bulkRejectModalOpen, setBulkRejectModalOpen] = useState(false);
+
+  // Reset selected students when data changes (page, filter, etc.)
+  useEffect(() => {
+    setSelectedStudents([]);
+  }, [data, page, searchParams]);
+
+  // Handle individual checkbox selection
+  const handleSelectStudent = (studentId) => {
+    if (isLeaderRole) return; // Disable selection for leaders
+
+    setSelectedStudents((prev) => {
+      if (prev.includes(studentId)) {
+        return prev.filter((id) => id !== studentId);
+      } else {
+        return [...prev, studentId];
+      }
+    });
+  };
+
+  // Handle select all checkbox
+  const handleSelectAll = (event) => {
+    if (isLeaderRole) return; // Disable selection for leaders
+
+    if (event.target.checked) {
+      // Select all approvable students on current page
+      const approvableStudents = data
+        .filter(
+          (student) => student.status !== "Approved" && student.internship_id
+        )
+        .map((student) => student.internship_id);
+      setSelectedStudents(approvableStudents);
+    } else {
+      setSelectedStudents([]);
+    }
+  };
+
+  // Check if all approvable students are selected
+  const isAllSelected = () => {
+    const approvableStudents = data.filter(
+      (student) => student.status !== "Approved" && student.internship_id
+    );
+    return (
+      approvableStudents.length > 0 &&
+      selectedStudents.length === approvableStudents.length
+    );
+  };
+
+  // Check if some students are selected
+  const isSomeSelected = () => {
+    return selectedStudents.length > 0 && !isAllSelected();
+  };
+
+  // Function to handle bulk approve button click
+  const handleBulkApproveClick = () => {
+    if (isLeaderRole) return; // Disable for leaders
+    setBulkApproveModalOpen(true);
+  };
+
+  // Function to handle bulk reject button click
+  const handleBulkRejectClick = () => {
+    if (isLeaderRole) return; // Disable for leaders
+    setBulkRejectModalOpen(true);
+  };
+
+  // Function to close bulk approve modal
+  const handleCloseBulkApproveModal = () => {
+    setBulkApproveModalOpen(false);
+  };
+
+  // Function to close bulk reject modal
+  const handleCloseBulkRejectModal = () => {
+    setBulkRejectModalOpen(false);
+  };
+
+  // Function to refresh data after changes
+  const handleDataRefresh = () => {
+    setSelectedStudents([]);
+    if (onDataRefresh) {
+      onDataRefresh();
+    } else if (onPageChange) {
+      onPageChange(page);
+    }
+  };
+
+  // Handle menu open
+  const handleMenuOpen = (event, student) => {
+    if (isLeaderRole) return; // Disable menu for leaders
+    setAnchorEl(event.currentTarget);
+    setSelectedStudent(student);
+  };
+
+  // Handle menu close
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  // Handle domain change action
+  const handleDomainChange = () => {
+    if (isLeaderRole) return; // Disable for leaders
+    handleMenuClose();
+    setDomainModalOpen(true);
+  };
+
+  // Handle approval action
+  const handleApprove = () => {
+    if (isLeaderRole) return; // Disable for leaders
+    handleMenuClose();
+    setApproveModalOpen(true);
+  };
+
+  // Handle rejection action
+  const handleReject = () => {
+    if (isLeaderRole) return; // Disable for leaders
+    handleMenuClose();
+    setRejectModalOpen(true);
+  };
+
+  // Handle page change
+  const handleChangePage = (event, newPage) => {
+    setExpandedRow(null);
+    if (onPageChange) {
+      onPageChange(newPage);
+    }
+  };
+
+  // Handle rows per page change
+  const handleChangeRowsPerPage = (event) => {
+    const newRowsPerPage = parseInt(event.target.value, 10);
+    setExpandedRow(null);
+    if (onRowsPerPageChange) {
+      onRowsPerPageChange(newRowsPerPage);
+    }
+  };
+
+  // Toggle expanded row
+  const handleExpandRow = (id) => {
+    setExpandedRow(expandedRow === id ? null : id);
+  };
+
+  // Handle search term change
+  const handleSearchChange = (e) => {
+    if (onSearchTermChange) {
+      onSearchTermChange(e.target.value);
+    }
+  };
+
+  // Determine which columns to show based on screen size
+  const getVisibleColumns = () => {
+    if (isMobile) {
+      return ["checkbox", "name", "rollNo", "actions"];
+    } else if (isTablet) {
+      return ["checkbox", "name", "rollNo", "passoutYear", "domain", "actions"];
+    }
+    return [
+      "checkbox",
+      "name",
+      "email",
+      "rollNo",
+      "passoutYear",
+      "cohort",
+      "branch",
+      "domain",
+      "actions",
+    ];
+  };
+
+  const visibleColumns = getVisibleColumns();
+
+  // Check if bulk actions should be disabled
+  const isBulkActionsDisabled = selectedStudents.length === 0 || isLeaderRole;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.1 }}
+      >
+        <Box sx={{ width: "100%", mt: 2 }}>
+          <TableControlsContainer>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Tooltip
+                title={
+                  isLeaderRole
+                    ? "Leaders cannot perform bulk actions"
+                    : isBulkActionsDisabled
+                    ? "Select students to approve"
+                    : `Approve ${selectedStudents.length} selected student${
+                        selectedStudents.length !== 1 ? "s" : ""
+                      }`
+                }
+                placement="right"
+              >
+                <Box>
+                  <ApproveButton
+                    variant="contained"
+                    color="success"
+                    startIcon={<DoneAllIcon />}
+                    onClick={handleBulkApproveClick}
+                    disabled={isBulkActionsDisabled || loading}
+                    size="small"
+                    sx={{
+                      color: "white",
+                    }}
+                  >
+                    Approve ({selectedStudents.length})
+                  </ApproveButton>
+                </Box>
+              </Tooltip>
+
+              <Tooltip
+                title={
+                  isLeaderRole
+                    ? "Leaders cannot perform bulk actions"
+                    : isBulkActionsDisabled
+                    ? "Select students to reject"
+                    : `Reject ${selectedStudents.length} selected student${
+                        selectedStudents.length !== 1 ? "s" : ""
+                      }`
+                }
+                placement="right"
+              >
+                <Box>
+                  <RejectButton
+                    variant="contained"
+                    color="error"
+                    startIcon={<BlockIcon />}
+                    onClick={handleBulkRejectClick}
+                    disabled={isBulkActionsDisabled || loading}
+                    size="small"
+                    sx={{
+                      color: "white",
+                    }}
+                  >
+                    Reject ({selectedStudents.length})
+                  </RejectButton>
+                </Box>
+              </Tooltip>
+            </Box>
+          </TableControlsContainer>
+
+          <StyledTableContainer component={Paper}>
+            <Table
+              size="small"
+              aria-label="student data table"
+              sx={{ minWidth: 650 }}
+            >
+              <StyledTableHead>
+                <TableRow>
+                  {visibleColumns.includes("checkbox") && (
+                    <StyledTableHeadCell padding="checkbox">
+                      <Checkbox
+                        color="primary"
+                        indeterminate={isSomeSelected()}
+                        checked={isAllSelected()}
+                        onChange={handleSelectAll}
+                        disabled={loading || isLeaderRole}
+                      />
+                    </StyledTableHeadCell>
+                  )}
+                  {visibleColumns.includes("name") && (
+                    <StyledTableHeadCell>Name</StyledTableHeadCell>
+                  )}
+                  {visibleColumns.includes("email") && (
+                    <StyledTableHeadCell>Email</StyledTableHeadCell>
+                  )}
+                  {visibleColumns.includes("rollNo") && (
+                    <StyledTableHeadCell>Roll No</StyledTableHeadCell>
+                  )}
+                  {visibleColumns.includes("passoutYear") && (
+                    <StyledTableHeadCell>Year</StyledTableHeadCell>
+                  )}
+                  {visibleColumns.includes("cohort") && (
+                    <StyledTableHeadCell>Cohort</StyledTableHeadCell>
+                  )}
+                  {visibleColumns.includes("branch") && (
+                    <StyledTableHeadCell>Branch</StyledTableHeadCell>
+                  )}
+                  {visibleColumns.includes("domain") && (
+                    <StyledTableHeadCell>Domain</StyledTableHeadCell>
+                  )}
+                  {visibleColumns.includes("actions") && (
+                    <StyledTableHeadCell align="center" width="60px">
+                      Actions
+                    </StyledTableHeadCell>
+                  )}
+                  {isMobile && !visibleColumns.includes("actions") && (
+                    <StyledTableHeadCell
+                      align="center"
+                      width="48px"
+                    ></StyledTableHeadCell>
+                  )}
+                </TableRow>
+              </StyledTableHead>
+
+              <TableBody>
+                {loading ? (
+                  // Loading skeleton rows
+                  Array.from(new Array(rowsPerPage)).map((_, index) => (
+                    <TableRow key={`skeleton-${index}`}>
+                      {visibleColumns.includes("checkbox") && (
+                        <TableCell padding="checkbox">
+                          <Skeleton
+                            variant="rectangular"
+                            width={24}
+                            height={24}
+                          />
+                        </TableCell>
+                      )}
+                      {visibleColumns.includes("name") && (
+                        <TableCell>
+                          <Skeleton variant="text" width="70%" height={20} />
+                        </TableCell>
+                      )}
+                      {visibleColumns.includes("email") && (
+                        <TableCell>
+                          <Skeleton variant="text" width="90%" height={20} />
+                        </TableCell>
+                      )}
+                      {visibleColumns.includes("rollNo") && (
+                        <TableCell>
+                          <Skeleton variant="text" width="50%" height={20} />
+                        </TableCell>
+                      )}
+                      {visibleColumns.includes("passoutYear") && (
+                        <TableCell>
+                          <Skeleton variant="text" width="40%" height={20} />
+                        </TableCell>
+                      )}
+                      {visibleColumns.includes("cohort") && (
+                        <TableCell>
+                          <Skeleton variant="text" width="60%" height={20} />
+                        </TableCell>
+                      )}
+                      {visibleColumns.includes("branch") && (
+                        <TableCell>
+                          <Skeleton variant="text" width="50%" height={20} />
+                        </TableCell>
+                      )}
+                      {visibleColumns.includes("domain") && (
+                        <TableCell>
+                          <Skeleton variant="text" width="70%" height={20} />
+                        </TableCell>
+                      )}
+                      {visibleColumns.includes("actions") && (
+                        <TableCell>
+                          <Skeleton variant="circular" width={24} height={24} />
+                        </TableCell>
+                      )}
+                      {isMobile && !visibleColumns.includes("actions") && (
+                        <TableCell>
+                          <Skeleton variant="circular" width={24} height={24} />
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))
+                ) : data.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={
+                        visibleColumns.length +
+                        (isMobile && !visibleColumns.includes("actions")
+                          ? 1
+                          : 0)
+                      }
+                    >
+                      <NoDataWrapper>
+                        <Typography
+                          variant="subtitle2"
+                          sx={{ mb: 0.5, opacity: 0.7 }}
+                        >
+                          No matching records
+                        </Typography>
+                        <Typography variant="caption">
+                          Try adjusting your filters
+                        </Typography>
+                      </NoDataWrapper>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  data.map((row, index) => (
+                    <React.Fragment key={row.id}>
+                      <motion.tr
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.2, delay: index * 0.03 }}
+                        component={StyledTableRow}
+                      >
+                        {visibleColumns.includes("checkbox") && (
+                          <StyledTableCell padding="checkbox">
+                            <Checkbox
+                              color="primary"
+                              checked={selectedStudents.includes(
+                                row.internship_id
+                              )}
+                              onChange={() =>
+                                handleSelectStudent(row.internship_id)
+                              }
+                              disabled={
+                                row.status === "Approved" ||
+                                !row.internship_id ||
+                                isLeaderRole
+                              }
+                            />
+                          </StyledTableCell>
+                        )}
+                        {visibleColumns.includes("name") && (
+                          <NonTruncatedTableCell component="th" scope="row">
+                            {row.name}
+                          </NonTruncatedTableCell>
+                        )}
+                        {visibleColumns.includes("email") && (
+                          <NonTruncatedTableCell>
+                            {row.email}
+                          </NonTruncatedTableCell>
+                        )}
+                        {visibleColumns.includes("rollNo") && (
+                          <StyledTableCell>{row.rollNo}</StyledTableCell>
+                        )}
+                        {visibleColumns.includes("passoutYear") && (
+                          <StyledTableCell>{row.passoutYear}</StyledTableCell>
+                        )}
+                        {visibleColumns.includes("cohort") && (
+                          <StyledTableCell>{row.cohort}</StyledTableCell>
+                        )}
+                        {visibleColumns.includes("branch") && (
+                          <NonTruncatedTableCell>
+                            {row.branch}
+                          </NonTruncatedTableCell>
+                        )}
+                        {visibleColumns.includes("domain") && (
+                          <NonTruncatedTableCell>
+                            {row.domain}
+                          </NonTruncatedTableCell>
+                        )}
+                        {visibleColumns.includes("actions") && (
+                          <StyledTableCell align="center" padding="none">
+                            <Tooltip
+                              title={
+                                isLeaderRole
+                                  ? "Leaders cannot perform actions"
+                                  : "Actions"
+                              }
+                              placement="top"
+                            >
+                              <IconButton
+                                size="small"
+                                onClick={(e) => handleMenuOpen(e, row)}
+                                sx={{ padding: 0.5 }}
+                                disabled={isLeaderRole}
+                              >
+                                <MoreVertIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </StyledTableCell>
+                        )}
+                        {isMobile && !visibleColumns.includes("actions") && (
+                          <StyledTableCell align="center" padding="none">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleExpandRow(row.id)}
+                              sx={{ padding: 0.5 }}
+                            >
+                              {expandedRow === row.id ? (
+                                <ExpandLessIcon fontSize="small" />
+                              ) : (
+                                <ExpandMoreIcon fontSize="small" />
+                              )}
+                            </IconButton>
+                          </StyledTableCell>
+                        )}
+                      </motion.tr>
+
+                      {/* Expandable row details for mobile view */}
+                      {isMobile &&
+                        !visibleColumns.includes("actions") &&
+                        expandedRow === row.id && (
+                          <TableRow>
+                            <TableCell
+                              colSpan={visibleColumns.length + 1}
+                              padding="none"
+                            >
+                              <MobileExpandableRow>
+                                {!visibleColumns.includes("email") && (
+                                  <DetailItem>
+                                    <span className="label">Email:</span>
+                                    <span className="value">{row.email}</span>
+                                  </DetailItem>
+                                )}
+                                {!visibleColumns.includes("rollNo") && (
+                                  <DetailItem>
+                                    <span className="label">Roll No:</span>
+                                    <span className="value">{row.rollNo}</span>
+                                  </DetailItem>
+                                )}
+                                {!visibleColumns.includes("passoutYear") && (
+                                  <DetailItem>
+                                    <span className="label">Year:</span>
+                                    <span className="value">
+                                      {row.passoutYear}
+                                    </span>
+                                  </DetailItem>
+                                )}
+                                {!visibleColumns.includes("cohort") && (
+                                  <DetailItem>
+                                    <span className="label">Cohort:</span>
+                                    <span className="value">{row.cohort}</span>
+                                  </DetailItem>
+                                )}
+                                {!visibleColumns.includes("branch") && (
+                                  <DetailItem>
+                                    <span className="label">Branch:</span>
+                                    <span className="value">{row.branch}</span>
+                                  </DetailItem>
+                                )}
+                                {!visibleColumns.includes("domain") && (
+                                  <DetailItem>
+                                    <span className="label">Domain:</span>
+                                    <span className="value">{row.domain}</span>
+                                  </DetailItem>
+                                )}
+                                {!visibleColumns.includes("status") && (
+                                  <DetailItem>
+                                    <span className="label">Status:</span>
+                                    <span className="value">
+                                      <Chip
+                                        label={row.status}
+                                        size="small"
+                                        color={getStatusChipColor(row.status)}
+                                        sx={{
+                                          fontWeight: 500,
+                                          fontSize: "0.7rem",
+                                          height: "20px",
+                                        }}
+                                      />
+                                    </span>
+                                  </DetailItem>
+                                )}
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    justifyContent: "flex-end",
+                                    mt: 1,
+                                  }}
+                                >
+                                  <Tooltip
+                                    title={
+                                      isLeaderRole
+                                        ? "Leaders cannot perform actions"
+                                        : "Actions"
+                                    }
+                                    placement="top"
+                                  >
+                                    <IconButton
+                                      size="small"
+                                      onClick={(e) => handleMenuOpen(e, row)}
+                                      disabled={isLeaderRole}
+                                    >
+                                      <MoreVertIcon fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                </Box>
+                              </MobileExpandableRow>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                    </React.Fragment>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+
+            {/* Replace TablePagination with CustomPagination */}
+            {!loading && (
+              <CustomPagination
+                count={totalCount}
+                page={page}
+                rowsPerPage={rowsPerPage}
+                onPageChange={handleChangePage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+              />
+            )}
+          </StyledTableContainer>
+        </Box>
+
+        {/* Action Menu */}
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleMenuClose}
+          anchorOrigin={{
+            vertical: "bottom",
+            horizontal: "right",
+          }}
+          transformOrigin={{
+            vertical: "top",
+            horizontal: "right",
+          }}
+          PaperProps={{
+            sx: {
+              borderRadius: "12px",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+              minWidth: "180px",
+              mt: 0.5,
+              overflow: "hidden",
+            },
+          }}
+          MenuListProps={{
+            sx: {
+              py: 0.5,
+            },
+          }}
+        >
+          <MenuItem
+            onClick={handleDomainChange}
+            disabled={isLeaderRole}
+            sx={{
+              fontSize: "0.85rem",
+              py: 1.2,
+              px: 2,
+              "&:hover": {
+                background: isLeaderRole
+                  ? "transparent"
+                  : "rgba(0, 136, 204, 0.08)",
+              },
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              opacity: isLeaderRole ? 0.5 : 1,
+            }}
+          >
+            <SwapIcon
+              fontSize="small"
+              color={isLeaderRole ? "disabled" : "primary"}
+            />
+            Change Domain
+          </MenuItem>
+
+          <Box
+            sx={{
+              borderTop: "1px solid rgba(0,0,0,0.08)",
+              my: 0.5,
+            }}
+          />
+
+          <MenuItem
+            onClick={handleApprove}
+            disabled={isLeaderRole}
+            sx={{
+              fontSize: "0.85rem",
+              py: 1.2,
+              px: 2,
+              "&:hover": {
+                background: isLeaderRole
+                  ? "transparent"
+                  : "rgba(76,175, 80, 0.08)",
+              },
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              opacity: isLeaderRole ? 0.5 : 1,
+            }}
+          >
+            <ApproveIcon
+              fontSize="small"
+              color={isLeaderRole ? "disabled" : "success"}
+            />
+            Approve Student
+          </MenuItem>
+
+          <MenuItem
+            onClick={handleReject}
+            disabled={isLeaderRole}
+            sx={{
+              fontSize: "0.85rem",
+              py: 1.2,
+              px: 2,
+              "&:hover": {
+                background: isLeaderRole
+                  ? "transparent"
+                  : "rgba(244, 67, 54, 0.08)",
+              },
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              opacity: isLeaderRole ? 0.5 : 1,
+            }}
+          >
+            <RejectIcon
+              fontSize="small"
+              color={isLeaderRole ? "disabled" : "error"}
+            />
+            Reject Student
+          </MenuItem>
+        </Menu>
+
+        {/* Domain Change Modal */}
+        {selectedStudent && (
+          <DomainChangeModal
+            open={domainModalOpen}
+            onClose={() => setDomainModalOpen(false)}
+            student={selectedStudent}
+            domains={filterOptions.domains || []}
+            onDataRefresh={onDataRefresh || handleDataRefresh}
+          />
+        )}
+
+        {/* Approval Confirmation Modal */}
+        {selectedStudent && (
+          <ApprovalConfirmationModal
+            open={approveModalOpen}
+            onClose={() => setApproveModalOpen(false)}
+            student={selectedStudent}
+            onDataRefresh={onDataRefresh || handleDataRefresh}
+          />
+        )}
+
+        {/* Rejection Confirmation Modal */}
+        {selectedStudent && (
+          <RejectionConfirmationModal
+            open={rejectModalOpen}
+            onClose={() => setRejectModalOpen(false)}
+            student={selectedStudent}
+            onDataRefresh={onDataRefresh || handleDataRefresh}
+          />
+        )}
+
+        {/* Bulk Approval Modal */}
+        <BulkApprovalConfirmationModal
+          open={bulkApproveModalOpen}
+          onClose={handleCloseBulkApproveModal}
+          studentsCount={selectedStudents.length}
+          internshipIds={selectedStudents}
+          selectedStudents={data.filter((student) =>
+            selectedStudents.includes(student.internship_id)
+          )} // Pass selected students data
+          onDataRefresh={onDataRefresh || handleDataRefresh}
+        />
+
+        {/* Bulk Rejection Modal */}
+        <BulkRejectionConfirmationModal
+          open={bulkRejectModalOpen}
+          onClose={handleCloseBulkRejectModal}
+          studentsCount={selectedStudents.length}
+          internshipIds={selectedStudents}
+          onDataRefresh={onDataRefresh || handleDataRefresh}
+        />
+      </motion.div>
+    </AnimatePresence>
+  );
+};
+
+export default ResultsTable;
