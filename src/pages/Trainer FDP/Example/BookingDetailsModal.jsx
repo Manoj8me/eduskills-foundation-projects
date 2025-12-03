@@ -182,7 +182,7 @@ const BookingDetailsModal = ({ isOpen, onClose, bookslotId }) => {
 
       alert(
         result?.message ||
-          `Successfully issued certificates to ${selectedStudents.length} student(s)`
+        `Successfully issued certificates to ${selectedStudents.length} student(s)`
       );
       setSelectedStudents([]);
       fetchBookingDetails(); // Refresh data
@@ -217,7 +217,7 @@ const BookingDetailsModal = ({ isOpen, onClose, bookslotId }) => {
       console.log(result);
       alert(
         result?.message ||
-          "Successfully issued participation certificates to all students"
+        "Successfully issued participation certificates to all students"
       );
       fetchBookingDetails(); // Refresh data
     } catch (err) {
@@ -277,9 +277,8 @@ const BookingDetailsModal = ({ isOpen, onClose, bookslotId }) => {
       "Nov",
       "Dec",
     ];
-    return `${date.getDate()} ${
-      monthNames[date.getMonth()]
-    } ${date.getFullYear()}`;
+    return `${date.getDate()} ${monthNames[date.getMonth()]
+      } ${date.getFullYear()}`;
   };
 
   const formatEventType = (type) => {
@@ -305,25 +304,28 @@ const BookingDetailsModal = ({ isOpen, onClose, bookslotId }) => {
       case 0:
         return (
           <span className="inline-flex items-center justify-center px-2 py-0.5 bg-red-100 text-red-600 rounded text-xs">
-            Not Eligible
+            Not Issued
           </span>
         );
+
       case 1:
         return (
-          <span className="inline-flex items-center justify-center px-2 py-0.5 bg-green-100 text-green-600 rounded text-xs">
-            Eligible
+          <span className="inline-flex items-center justify-center px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs">
+            Issued
           </span>
         );
+
       case 2:
         return (
           <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs rounded border border-blue-200 font-medium">
-            Certificate Issued
+            Received
           </span>
         );
+
       default:
         return null;
     }
-  };
+  }
 
   // Function to get day attendance status
   const getDayAttendance = (student, day) => {
@@ -530,8 +532,12 @@ const BookingDetailsModal = ({ isOpen, onClose, bookslotId }) => {
                     </div>
                     <button
                       onClick={handleIssueParticipationCertificate}
-                      disabled={issuingParticipationCert}
-                      className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                      disabled={issuingParticipationCert || !bookingData?.event?.can_issue}
+                      className={`px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors flex items-center space-x-2
+    ${issuingParticipationCert || !bookingData?.event?.can_issue
+                          ? "bg-blue-400 cursor-not-allowed opacity-60"
+                          : "bg-blue-600 hover:bg-blue-700"
+                        }`}
                     >
                       {issuingParticipationCert ? (
                         <>
@@ -545,6 +551,7 @@ const BookingDetailsModal = ({ isOpen, onClose, bookslotId }) => {
                         </>
                       )}
                     </button>
+
                   </div>
 
                   {/* Selected Students Certificate Issue Button */}
@@ -862,7 +869,7 @@ const BookingDetailsModal = ({ isOpen, onClose, bookslotId }) => {
                               Status
                             </th>
                             <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                              Eligibility
+                              Ceriticate Status
                             </th>
                           </tr>
                         </thead>
@@ -946,21 +953,21 @@ const BookingDetailsModal = ({ isOpen, onClose, bookslotId }) => {
                                           >
                                             {domain.trim().length > 25
                                               ? domain.trim().substring(0, 25) +
-                                                "..."
+                                              "..."
                                               : domain.trim()}
                                           </span>
                                         ))}
                                       {student.domains?.split(",").length >
                                         2 && (
-                                        <span
-                                          className="px-1.5 py-0.5 bg-gray-100 text-gray-700 text-[10px] rounded"
-                                          title={student.domains}
-                                        >
-                                          +
-                                          {student.domains.split(",").length -
-                                            2}
-                                        </span>
-                                      )}
+                                          <span
+                                            className="px-1.5 py-0.5 bg-gray-100 text-gray-700 text-[10px] rounded"
+                                            title={student.domains}
+                                          >
+                                            +
+                                            {student.domains.split(",").length -
+                                              2}
+                                          </span>
+                                        )}
                                     </div>
                                   </div>
                                 </td>

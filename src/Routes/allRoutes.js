@@ -150,6 +150,10 @@ import TechCampDashboard from "../pages/Trainer FDP/Example/TechCampDashboard";
 import FdpDashboard from "../pages/Trainer FDP/Example/FdpDashboard";
 import EdpDashboard from "../pages/Trainer FDP/Example/EdpDashboard";
 
+import CertificateCanvas from "../pages/Admin/Certificates/canvaFiles/CertificateCanvas";
+import CertificateManager from "../pages/Admin/Certificates/certificateManagement/CertificateManager";
+
+
 // import ColumnSelector from "../components/New Report/ColumnSelector";
 
 const authProtected = [
@@ -649,6 +653,21 @@ const authProtectedRoutes = [
     component: <AwardManagementSystem />,
     roles: ["admin"],
   },
+  // new item
+  {
+    // path: "/issue-certificates",
+    // component: <IssueCertificate/>,
+    path: "/certificate-manager",
+    component: <CertificateManager />,
+    roles: ["admin"],
+  },
+  // new item
+  {
+    path: "/certificate-canvas",
+    component: <CertificateCanvas />,
+    roles: ["admin"],
+  },
+
   {
     path: "/trainer-management",
     component: <TrainerManagement />,

@@ -27,6 +27,20 @@ const navConfig = [
     path: "/award-management",
     icon: <Icon icon="gg:awards" height={22} width={22} />,
   },
+  // new item
+{
+  title: "Certificates",
+  icon: <Icon icon="lineicons:certificate-badge-1" height={22} width={22} />,
+  children: [
+    {
+      title: "Issue Certificates",
+      // path: "/issue-certificates",
+      path: "/certificate-manager",
+      icon: <Icon icon="mdi:certificate-outline" height={20} width={20} />,
+    },
+  ],
+},
+
   {
     title: "Academy",
     path: "/academy",
@@ -105,26 +119,26 @@ const navConfig = [
     path: "/coming-soon",
     icon: <Icon icon="tabler:users-group" height={22} width={22} />,
   },
-  {
-    title: "Tech Camp",
-    path: "/acalendar",
-    parent: "Activities",
-    icon: <Icon icon="carbon:user-activity" height={22} width={22} />,
-    badge: "Testing", // Added testing badge
-  },
-  {
-    title: "Events",
-    path: "/multi",
-    icon: <Icon icon="ic:round-event" height={22} width={22} />,
-    children: [
-      {
-        title: "Connect",
-        path: "/multi",
-        parent: "Events",
-        icon: <img src={connectimg} alt="Connect" height={22} width={22} />,
-      },
-    ],
-  },
+  // {
+  //   title: "Tech Camp",
+  //   path: "/acalendar",
+  //   parent: "Activities",
+  //   icon: <Icon icon="carbon:user-activity" height={22} width={22} />,
+  //   badge: "Testing", // Added testing badge
+  // },
+  // {
+  //   title: "Events",
+  //   path: "/multi",
+  //   icon: <Icon icon="ic:round-event" height={22} width={22} />,
+  //   children: [
+  //     {
+  //       title: "Connect",
+  //       path: "/multi",
+  //       parent: "Events",
+  //       icon: <img src={connectimg} alt="Connect" height={22} width={22} />,
+  //     },
+  //   ],
+  // },
   {
     title: "Activities",
     path: "/activity",
@@ -206,12 +220,12 @@ const navConfig = [
     path: "/agenda-manage",
     icon: <Icon icon="ic:round-event" height={22} width={22} />,
     children: [
-      {
-        title: "Connect",
-        path: "/event-connect",
-        parent: "Event",
-        icon: <img src={connectimg} alt="Connect" height={22} width={22} />,
-      },
+      // {
+      //   title: "Connect",
+      //   path: "/event-connect",
+      //   parent: "Event",
+      //   icon: <img src={connectimg} alt="Connect" height={22} width={22} />,
+      // },
       // {
       //   title: "Connect Agenda",
       //   path: "/agenda-manage",
@@ -225,7 +239,14 @@ const navConfig = [
       //   icon: <img src={connectimg} alt="Connect" height={22} width={22} />,
       // },
       {
-        title: "Activities Calendar",
+        title: "Connect",
+        path: "/multi",
+        parent: "Event",
+        icon: <img src={connectimg} alt="Connect" height={22} width={22} />,
+        badge: "Testing",
+      },
+      {
+        title: "Trainers Availability",
         path: "/acalendar",
         parent: "Event",
         icon: <Icon icon="ic:round-event" height={22} width={22} />,
@@ -239,14 +260,14 @@ const navConfig = [
         badge: "Testing", // Added testing badge
       },
       {
-        title: "Fdp",
+        title: "FDP",
         path: "/fdp_dashboard",
         parent: "Event",
         icon: <Icon icon="ic:round-event" height={22} width={22} />,
         badge: "Testing", // Added testing badge
       },
       {
-        title: "Edp",
+        title: "EDP",
         path: "/edp_dashboard",
         parent: "Event",
         icon: <Icon icon="ic:round-event" height={22} width={22} />,
@@ -466,7 +487,7 @@ const roleTitles = {
     "Internship",
     // "Event/Activity",
     "Activities",
-    "Events",
+    // "Events",
     "Jobs",
     "Student Info",
     "Corporate",
@@ -563,6 +584,7 @@ const roleTitles = {
     // "Support"
   ],
   admin: [
+    "Certificates",  // ✅ New item
     "Dashboard",
     "Event",
     "IT Support",
@@ -583,11 +605,11 @@ const roleTitles = {
   staff: [
     "Dashboard",
     "Institutes",
-    "Connect Registrations",
+    // "Connect Registrations",
     // "Internship",
     "Event Details",
     "Tech Camp",
-
+    "Event",
     // "Institute",
     // "Academy Program",
     // "Institutional Details",
@@ -600,24 +622,63 @@ const roleTitles = {
 const filterNavConfig = (roles) => {
   const allowedTitles = [];
 
+  // ✅ Collect allowed titles based on role
   for (const role in roles) {
     if (roles[role]) {
       allowedTitles.push(...roleTitles[role]);
     }
   }
 
+  //  Filter and map nav items
   const menuItems = navConfig
     .filter((item) => allowedTitles.includes(item.title))
-    .map((item) => ({
-      title: item.title,
-      path: item.path,
-      icon: item.icon,
-      children: item.children,
-      badge: item.badge, // Include badge property
-    }));
+    .map((item) => {
+      let children = item.children || [];
+
+      //  For staff: remove "Connect" from Events submenu
+      if (roles.staff && item.title === "Event") {
+        children = children.filter((child) => child.title !== "Connect");
+      }
+
+      //  For staff: remove extra top-level "Tech Camp" (outside Events)
+      if (roles.staff && item.title === "Tech Camp") {
+        return null; // exclude this entry
+      }
+
+      return {
+        title: item.title,
+        path: item.path,
+        icon: item.icon,
+        children,
+        badge: item.badge, // Include badge property
+      };
+    })
+    .filter(Boolean); // remove null entries like the excluded Tech Camp
 
   return menuItems;
 };
+
+// const filterNavConfig = (roles) => {
+//   const allowedTitles = [];
+
+//   for (const role in roles) {
+//     if (roles[role]) {
+//       allowedTitles.push(...roleTitles[role]);
+//     }
+//   }
+
+//   const menuItems = navConfig
+//     .filter((item) => allowedTitles.includes(item.title))
+//     .map((item) => ({
+//       title: item.title,
+//       path: item.path,
+//       icon: item.icon,
+//       children: item.children,
+//       badge: item.badge, // Include badge property
+//     }));
+
+//   return menuItems;
+// };
 
 export const MenuItems = () => {
   const authorise = localStorage.getItem("Authorise");

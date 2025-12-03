@@ -61,9 +61,8 @@ const BookedDetailsList = ({ bookedDetails, onBookingDeleted }) => {
       "Nov",
       "Dec",
     ];
-    return `${date.getDate()} ${
-      monthNames[date.getMonth()]
-    } ${date.getFullYear()}`;
+    return `${date.getDate()} ${monthNames[date.getMonth()]
+      } ${date.getFullYear()}`;
   };
 
   const getStatusColor = (status) => {
@@ -282,11 +281,10 @@ const BookedDetailsList = ({ bookedDetails, onBookingDeleted }) => {
         <div className="flex flex-wrap gap-2 mb-6 border-b border-gray-200">
           <button
             onClick={() => handleTabChange("all")}
-            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
-              activeTab === "all"
+            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${activeTab === "all"
                 ? "border-blue-600 text-blue-600"
                 : "border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-300"
-            }`}
+              }`}
           >
             All ({bookedDetails.length})
           </button>
@@ -298,11 +296,10 @@ const BookedDetailsList = ({ bookedDetails, onBookingDeleted }) => {
               <button
                 key={eventType}
                 onClick={() => handleTabChange(eventType)}
-                className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
-                  activeTab === eventType
+                className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${activeTab === eventType
                     ? "border-blue-600 text-blue-600"
                     : "border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-300"
-                }`}
+                  }`}
               >
                 {formatEventType(eventType)} ({count})
               </button>
@@ -439,20 +436,18 @@ const BookedDetailsList = ({ bookedDetails, onBookingDeleted }) => {
             <div
               className="fixed bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-40 w-48"
               style={{
-                top: `${
-                  document
+                top: `${document
                     .querySelector(`[data-menu-index="${openMenuIndex}"]`)
                     ?.getBoundingClientRect().bottom +
                   window.scrollY +
                   8
-                }px`,
-                left: `${
-                  document
+                  }px`,
+                left: `${document
                     .querySelector(`[data-menu-index="${openMenuIndex}"]`)
                     ?.getBoundingClientRect().right +
                   window.scrollX -
                   192
-                }px`,
+                  }px`,
               }}
             >
               <button
@@ -515,11 +510,10 @@ const BookedDetailsList = ({ bookedDetails, onBookingDeleted }) => {
                         <button
                           key={pageNum}
                           onClick={() => handlePageChange(pageNum)}
-                          className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                            currentPage === pageNum
+                          className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${currentPage === pageNum
                               ? "bg-blue-600 text-white"
                               : "border border-gray-300 hover:bg-gray-50 text-gray-700"
-                          }`}
+                            }`}
                         >
                           {pageNum}
                         </button>

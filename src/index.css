@@ -61,3 +61,22 @@ body::-moz-scrollbar-thumb {
 body::-moz-scrollbar-thumb:hover {
   background: #555;
 }
+/* newly added by me */
+/* Prevent Chrome RTL fallback bug */
+*[contenteditable="true"] {
+  direction: ltr !important;
+  unicode-bidi: plaintext !important;
+}
+/* Required for proper caret behavior inside flex containers */
+*[contenteditable="true"] {
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+/* Fix outside click detection */
+#root,
+.app,
+body {
+  position: relative !important;
+  pointer-events: auto !important;
+}
