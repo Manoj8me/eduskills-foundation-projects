@@ -152,6 +152,7 @@ import EdpDashboard from "../pages/Trainer FDP/Example/EdpDashboard";
 
 import CertificateCanvas from "../pages/Admin/Certificates/canvaFiles/CertificateCanvas";
 import CertificateManager from "../pages/Admin/Certificates/certificateManagement/CertificateManager";
+import CanvaEditorPage from "../pages/Admin/Certificates/canvaFiles/CanvaEditorPage";
 
 
 // import ColumnSelector from "../components/New Report/ColumnSelector";
@@ -667,7 +668,14 @@ const authProtectedRoutes = [
     component: <CertificateCanvas />,
     roles: ["admin"],
   },
-
+  // {
+  //   path:"/admin/cert-preview/:versionId",
+  //   element:<PreviewCertificate />
+  // },
+  {
+ path:"/admin/cert-editor/:certificateId/:versionId",
+    component:< CanvaEditorPage   />,
+  },
   {
     path: "/trainer-management",
     component: <TrainerManagement />,

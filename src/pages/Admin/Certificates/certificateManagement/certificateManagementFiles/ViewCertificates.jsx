@@ -45,27 +45,37 @@ const ViewCertificates = ({ activity, onBack, onViewVersions, token }) => {
     // FETCH VERSIONS + SEND TO PARENT
     // -----------------------------
     const handleViewVersions = async (cert) => {
-    try {
-        const response = await fetch(
-            `${BASE_URL}/admin/certificate-versions/${cert.certificate_id}`,
-            {
-                method: "GET",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
-            }
-        );
+        try {
+            const response = await fetch(
+                `${BASE_URL}/admin/certificate-versions/${cert.certificate_id}`,
+                {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            );
 
-        const data = await response.json();
+            const data = await response.json();
 
-        // Send ALL DATA to parent correctly
-        onViewVersions(data);
+            // 🚨 FIX: convert array to correct object structure
+            onViewVersions({
+                certificate_id: data.certificate_id,
+                certificate_name: data.certificate_name,
+                activity_name: data.activity_name,
+                versions: Array.isArray(data.versions) ? data.versions : [],
+                // certificate_id: cert.certificate_id,
+                // certificate_name: cert.certificate_name,
+                // activity_name: data.activity_name,    
+                // versions: Array.isArray(data) ? data : [],  // <--- VERY IMPORTANT            
+            });
 
-    } catch (error) {
-        console.error("Error fetching certificate versions:", error);
-    }
-};
+        } catch (error) {
+            console.error("Error fetching certificate versions:", error);
+        }
+    };
+
 
 
     return (

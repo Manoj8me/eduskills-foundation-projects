@@ -1,7 +1,7 @@
 // new fullycorrected code
 // CertificateCanvas.jsx
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Rnd } from "react-rnd";
 import { ImageUp, Type } from "lucide-react";
 import { previewHtml } from "./previewHtml";
@@ -11,6 +11,7 @@ import MiniToolbar from "./MiniToolbar";
 import CanvasPage from "./CanvasPage";
 import CanvasSidebar from "./CanvasSidebar";
 import CanvasTopbar from "./CanvasTopbar";
+import { BASE_URL } from "../../../../services/configUrls";
 
 /*
   CertificateCanvas - fixes:
@@ -35,6 +36,7 @@ export default function CertificateCanvas() {
     const token = localStorage.getItem("accessToken");
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
+const { versionId } = useParams();
 
     // ---- URL PARAMS (must come AFTER searchParams declaration) ----
     const orientation =
@@ -49,7 +51,7 @@ export default function CertificateCanvas() {
     const validityDate = searchParams.get("validityDate") || "";
 
     // version_id (MUST be declared ONLY ONCE)
-    const versionId = searchParams.get("version_id");
+    // const versionId = searchParams.get("version_id");
 
     // ---- A4 dimensions ----
     const A4 = { w: 794, h: 1123 };
@@ -124,7 +126,7 @@ export default function CertificateCanvas() {
         fetchVariables();
     }, [versionId]);
     // --------------------------------------------------------------
-
+// new design code
     // Insert Variable Into Selected Text    
     // State
     const [elements, setElements] = useState([]); // element list
@@ -132,6 +134,9 @@ export default function CertificateCanvas() {
     const [uploads, setUploads] = useState([]); // uploaded images (base64 src stored)
     const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
     const [lastSavedSnapshot, setLastSavedSnapshot] = useState(null);
+
+    
+
 
     // history stacks
     const [history, setHistory] = useState([]);
@@ -210,6 +215,34 @@ export default function CertificateCanvas() {
         setShowPanel(false);
         setPanelType(null);
     }
+
+    // add placeholders/variables
+const addVariableObject = (variableName) => {
+    const id = Date.now();
+    const newVar = {
+        id,
+        type: "text",
+        x: 100,
+        y: 100,
+        width: 150,
+        height: 40,
+        rotation: 0,
+        props: {
+            text: `{{${variableName}}}`,
+            fontSize: 20,
+            fontWeight: 400,
+            italic: false,
+            align: "left",
+            uppercase: false,
+            color: "#0f172a",
+            fontFamily: "Inter",
+        },
+    };
+
+    setElements((prev) => [...prev, newVar]);   // ✅ correct state
+};
+
+
 
     // Add image
     function addImage(upload) {
@@ -452,6 +485,59 @@ export default function CertificateCanvas() {
         setSelectedId(null);
     }
 
+    // 🔥 STEP 1: Get Canvas HTML
+  const getCanvasHTML = () => {
+    const canvasElement = document.getElementById("certificate-canvas");
+    return canvasElement ? canvasElement.outerHTML : "";
+  };
+
+  // 🔥 STEP 2: Get Metadata JSON from your canvas state (layers, text, images)
+  const getMetadata = () => {
+    // ⬅ customize based on your project
+    return {
+      created_at: new Date().toISOString(),
+      items: elements,   // your own canvas object list
+      orientation,
+      size: A4,
+    };
+  };
+
+  // 🔥 STEP 3: SAVE API CALL
+  const handleSave = async () => {
+    try {
+      const rawHTML = getCanvasHTML();
+      const metadataJson = JSON.stringify(getMetadata());
+
+      const formData = new FormData();
+      formData.append("version_id", versionId);
+      formData.append("raw_html", rawHTML);
+      formData.append("metadata", metadataJson);
+
+      const res = await fetch(`${BASE_URL}/admin/certificate-templates/upload-html`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!res.ok) {
+        alert("Failed to save certificate template");
+        return;
+      }
+
+      const saved = await res.json();
+      console.log("Saved template:", saved);
+
+      alert("Certificate template saved successfully!");
+
+    } catch (error) {
+      console.error("Save error:", error);
+      alert("Something went wrong while saving");
+    }
+  };
+
+
     // Preview -> open new tab with exact px sizing (mm -> px)
     // renamed to handlePreview to avoid potential linter collisions
     const handlePreview = () => {
@@ -480,11 +566,6 @@ export default function CertificateCanvas() {
         w.document.close();
     };
 
-    // Save (simulate)
-    function save() {
-        setLastSavedSnapshot(JSON.stringify(elements));
-        alert("Saved (simulation). Implement API call for persistence.");
-    }
 
     // Back with prompt if dirty
     function back() {
@@ -496,7 +577,7 @@ export default function CertificateCanvas() {
         setShowDiscardConfirm(true);
     }
     function confirmDiscard(doSave) {
-        if (doSave) save();
+        if (doSave) handleSave();
         setShowDiscardConfirm(false);
         navigate("/certificate-manager");
     }
@@ -536,6 +617,7 @@ export default function CertificateCanvas() {
         return () => document.removeEventListener("mousedown", onDocClick);
     }, []);
 
+
     // --- Render ---
     return (
         <div className=" CanvasStyles cert-root">
@@ -544,7 +626,7 @@ export default function CertificateCanvas() {
                 back={back}
                 undo={undo}
                 redo={redo}
-                save={save}
+                save={handleSave}
                 preview={handlePreview} // <-- pass the renamed handler
                 orientation={orientation}
                 certificateName={certificateName}
@@ -573,6 +655,7 @@ export default function CertificateCanvas() {
                     insertVariableIntoSelected={insertVariableIntoSelected}
                     versionId={versionId}     // ⭐ REQUIRED
                     token={token}   // ⭐ REQUIRED
+                    addVariableObject={addVariableObject}   // ⬅️ NEW PROP
                 />
 
                 {/* Canvas */}
@@ -588,6 +671,7 @@ export default function CertificateCanvas() {
                     editingRefs={editingRefs}
                     finishTextEdit={finishTextEdit}
                     onTextKeyDown={onTextKeyDown}
+                     addVariableObject={addVariableObject}   // ⬅️ NEW
                 />
             </div>
 

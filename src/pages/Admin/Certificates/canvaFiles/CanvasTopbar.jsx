@@ -5,13 +5,12 @@ export default function CanvasTopbar({
   back,
   undo,
   redo,
-  save,
+  save,   // ⬅ save function comes from parent
   preview,
   orientation,
   certificateName,
   A4
 }) {
-
   return (
     <header className="topbar">
       {/* LEFT */}

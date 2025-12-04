@@ -27,17 +27,36 @@ export default function CanvasPage({
     editingRefs,
     finishTextEdit,
     onTextKeyDown,
+    addVariableObject,   // ⬅️ Add this
 })
 
 {
     return (
         <main className="canvas-area flex justify-center w-full">
             <div className="canvas-stage flex justify-center w-full">
-                <div
+                {/* <div
                     className="canvas-paper"
                     onMouseDown={onPaperMouseDown}
                     ref={paperRef}
-                >
+                > */}
+                <div
+    className="canvas-paper"
+    onMouseDown={onPaperMouseDown}
+    ref={paperRef}
+    onDrop={(e) => {
+        e.preventDefault();
+        const variableName = e.dataTransfer.getData("variableName");
+
+        if (variableName) {
+            addVariableObject(variableName);   // ⭐ WORKS NOW
+            return;
+        }
+
+        // keep your existing drop logic
+    }}
+    onDragOver={(e) => e.preventDefault()}
+>
+
                     <div
                         className="paper-inner"
                         style={{

@@ -1,7 +1,7 @@
 // after design
 // CanvasSidebar.jsx
 import React, { useState } from "react";
-import { Type, ImageUp } from "lucide-react";
+import { Type, ImageUp, Pencil, Trash2, Plus } from "lucide-react";
 import { BASE_URL } from "../../../../services/configUrls";
 
 export default function CanvasSidebar({
@@ -18,77 +18,156 @@ export default function CanvasSidebar({
     handleFiles,
     versionId,
     insertVariableIntoSelected,
-    token               // ✅ FIX: token is received here
+    token
 }) {
 
     const [variables, setVariables] = useState([]);
     const [loadingVars, setLoadingVars] = useState(false);
     const [varError, setVarError] = useState("");
 
-    // -----------------------------------------
-    // LOAD VARIABLES (AUTH REQUIRED)
-    // -----------------------------------------
-    const loadVariables = async () => {
-        if (!versionId) {
-            setVarError("version_id missing");
-            return;
-        }
+    const [addMode, setAddMode] = useState(false);
+    const [newVarName, setNewVarName] = useState("");
 
-        if (!token) {
-            setVarError("Token missing. Cannot authenticate.");
-            return;
-        }
+    const [editId, setEditId] = useState(null);
+    const [editName, setEditName] = useState("");
+
+    // -------------------------------------------------------
+    // FETCH VARIABLES
+    // -------------------------------------------------------
+    const loadVariables = async () => {
+        if (!versionId || !token) return;
 
         setLoadingVars(true);
         setVarError("");
 
         try {
             const res = await fetch(`${BASE_URL}/admin/variables/${versionId}`, {
-                method: "GET",
                 headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,     // ✅ FIXED
+                    Authorization: `Bearer ${token}`,
                 },
             });
-            
-            if (res.status === 401) {
-                setVarError("Authentication failed (401). Invalid / expired token.");
+
+            if (!res.ok) {
+                setVarError("Failed to load variables");
                 return;
             }
 
             const data = await res.json();
-
-            if (Array.isArray(data)) {
-                setVariables(data);
-            } else {
-                setVariables([]);
-            }
+            setVariables(Array.isArray(data) ? data : []);
 
         } catch (err) {
-            console.error("Variable API error:", err);
-            setVarError("Failed to load variables");
+            console.error("Variable fetch error:", err);
+            setVarError("Error loading variables.");
         } finally {
             setLoadingVars(false);
         }
     };
 
-    // -----------------------------------------
+    // -------------------------------------------------------
+    // ADD VARIABLE
+    // -------------------------------------------------------
+    const addVariable = async () => {
+        if (!newVarName.trim()) return;
+
+        try {
+            const res = await fetch(`${BASE_URL}/admin/certificate/variable`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    version_id: versionId,
+                    variable: newVarName.trim(),
+                }),
+            });
+
+            if (!res.ok) {
+                alert("Failed to add variable");
+                return;
+            }
+
+            setNewVarName("");
+            setAddMode(false);
+            loadVariables();
+
+        } catch (err) {
+            console.error("Add variable error:", err);
+        }
+    };
+
+    // -------------------------------------------------------
+    // EDIT VARIABLE
+    // -------------------------------------------------------
+    const saveEditVariable = async () => {
+        if (!editName.trim()) return;
+
+        try {
+            const res = await fetch(`${BASE_URL}/admin/certificate/variable`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    version_id: versionId,
+                    variable_id: editId,
+                    new_variable: editName.trim(),
+                }),
+            });
+
+            if (!res.ok) {
+                alert("Failed to edit variable");
+                return;
+            }
+
+            setEditId(null);
+            setEditName("");
+            loadVariables();
+
+        } catch (err) {
+            console.error("Edit variable error:", err);
+        }
+    };
+
+    // -------------------------------------------------------
+    // DELETE VARIABLE
+    // -------------------------------------------------------
+    const deleteVariable = async (id) => {
+        if (!window.confirm("Delete this variable?")) return;
+
+        try {
+            const res = await fetch(`${BASE_URL}/admin/certificate/variable`, {
+                method: "DELETE",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    version_id: versionId,
+                    variable_id: id,
+                }),
+            });
+
+            if (!res.ok) {
+                alert("Failed to delete variable");
+                return;
+            }
+
+            loadVariables();
+
+        } catch (err) {
+            console.error("Delete error:", err);
+        }
+    };
+
+    // -------------------------------------------------------
     // PANEL HANDLERS
-    // -----------------------------------------
-    const openTextPanel = () => {
-        setPanelType("text");
-        setShowPanel((s) => !s);
-    };
-
-    const openUploadsPanel = () => {
-        setPanelType("uploads");
-        setShowPanel((s) => !s);
-    };
-
+    // -------------------------------------------------------
     const openVariablesPanel = () => {
         setPanelType("variables");
         setShowPanel((s) => !s);
-        loadVariables(); // 🟢 API call when panel opens
+        loadVariables();
     };
 
     return (
@@ -96,28 +175,25 @@ export default function CanvasSidebar({
             <div className="sidebar-inner">
 
                 {/* TEXT */}
-                <div
-                    className="sidebar-item sidebar-item--pretty"
-                    onClick={openTextPanel}
-                >
+                <div className="sidebar-item sidebar-item--pretty" onClick={() => {
+                    setPanelType("text");
+                    setShowPanel((s) => !s);
+                }}>
                     <div className="icon"><Type size={22} /></div>
                     <div className="label">Text</div>
                 </div>
 
                 {/* UPLOADS */}
-                <div
-                    className="sidebar-item sidebar-item--pretty"
-                    onClick={openUploadsPanel}
-                >
+                <div className="sidebar-item sidebar-item--pretty" onClick={() => {
+                    setPanelType("uploads");
+                    setShowPanel((s) => !s);
+                }}>
                     <div className="icon"><ImageUp size={22} /></div>
                     <div className="label">Uploads</div>
                 </div>
 
                 {/* VARIABLES */}
-                <div
-                    className="sidebar-item sidebar-item--pretty"
-                    onClick={openVariablesPanel}
-                >
+                <div className="sidebar-item sidebar-item--pretty" onClick={openVariablesPanel}>
                     <div className="icon">{`{}`}</div>
                     <div className="label">Variables</div>
                 </div>
@@ -127,7 +203,107 @@ export default function CanvasSidebar({
             {showPanel && (
                 <div className="sidebar-panel sidebar-panel--float" ref={panelRef}>
 
-                    {/* TEXT PANEL */}
+                    {/* ------------------------------ */}
+                    {/* VARIABLES PANEL */}
+                    {/* ------------------------------ */}
+                    {panelType === "variables" && (
+                        <div className="panel-inner">
+                            <div className="panel-title-row">
+                                <div className="panel-title">Dynamic Variables</div>
+
+                                {/* ADD VARIABLE BUTTON */}
+                                <button
+                                    className="panel-btn small"
+                                    onClick={() => {
+                                        setAddMode(!addMode);
+                                        setEditId(null);
+                                        setNewVarName("");
+                                    }}
+                                >
+                                    <Plus size={16} /> Add
+                                </button>
+                            </div>
+
+                            {addMode && (
+                                <div className="add-box">
+                                    <input
+                                        type="text"
+                                        placeholder="New variable name..."
+                                        value={newVarName}
+                                        onChange={(e) => setNewVarName(e.target.value)}
+                                    />
+                                    <button onClick={addVariable}>Save</button>
+                                </div>
+                            )}
+
+                            {loadingVars && <div className="muted">Loading...</div>}
+                            {varError && <div className="error">{varError}</div>}
+
+                            {variables.map((v) => (
+                                // <div className="var-row" key={v.variable_id}>
+                                <div className="var-row flex items-center justify-between bg-gray-100 p-2 rounded" key={v.variable_id}>
+
+                                    {/* DRAG + INSERT */}
+                                    <div
+                                        className="var-item"
+                                        draggable
+                                        onDragStart={(e) => {
+                                            e.dataTransfer.setData("variableName", v.variable_name);
+                                        }}
+                                        onClick={() => insertVariableIntoSelected(v.variable_name)}
+                                    >
+                                        {editId === v.variable_id ? (
+                                            <input
+                                                value={editName}
+                                                onChange={(e) => setEditName(e.target.value)}
+                                            />
+                                        ) : (
+                                            `{{${v.variable_name}}}`
+                                        )}
+                                    </div>
+
+                                    {/* ACTIONS */}
+                                    <div className="var-actions flex gap-2">
+                                        {/* <div className="var-actions"> */}
+
+                                        {/* EDIT */}
+                                        {editId === v.variable_id ? (
+                                            <button className="icon-btn" onClick={saveEditVariable}>
+                                                Save
+                                            </button>
+                                        ) : (
+                                            <Pencil
+                                                className="cursor-pointer text-gray-600 hover:text-black"
+                                                size={16}
+                                                // className="icon-btn"
+                                                // size={16}
+                                                onClick={() => {
+                                                    setEditId(v.variable_id);
+                                                    setEditName(v.variable_name);
+                                                    setAddMode(false);
+                                                }}
+                                            />
+                                        )}
+
+                                        {/* DELETE */}
+                                        <Trash2
+                                            className="cursor-pointer text-red-500 hover:text-red-700"
+                                            size={16}
+                                            // className="icon-btn delete"
+                                            // size={16}
+                                            onClick={() => deleteVariable(v.variable_id)}
+                                        />
+                                    </div>
+                                </div>
+                            ))}
+
+                        </div>
+                    )}
+
+                    {/* ------------------------------ */}
+                    {/* TEXT & UPLOADS PANELS UNCHANGED */}
+                    {/* ------------------------------ */}
+
                     {panelType === "text" && (
                         <div className="panel-inner">
                             <div className="panel-title">Text</div>
@@ -135,7 +311,6 @@ export default function CanvasSidebar({
                         </div>
                     )}
 
-                    {/* UPLOADS PANEL */}
                     {panelType === "uploads" && (
                         <div className="panel-inner uploads">
                             <div className="panel-title">Uploads</div>
@@ -166,30 +341,6 @@ export default function CanvasSidebar({
                                     </div>
                                 ))}
                             </div>
-                        </div>
-                    )}
-
-                    {/* VARIABLES PANEL */}
-                    {panelType === "variables" && (
-                        <div className="panel-inner">
-                            <div className="panel-title">Dynamic Variables</div>
-
-                            {loadingVars && <div className="muted">Loading...</div>}
-                            {varError && <div className="error">{varError}</div>}
-
-                            {!loadingVars && !varError && variables.length === 0 && (
-                                <div className="muted">No variables found.</div>
-                            )}
-
-                            {variables.map((v) => (
-                                <div
-                                    key={v.variable_id}
-                                    className="var-item"
-                                    onClick={() => insertVariableIntoSelected(v.variable_name)}
-                                >
-                                    {`{{${v.variable_name}}}`}
-                                </div>
-                            ))}
                         </div>
                     )}
 

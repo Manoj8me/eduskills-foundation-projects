@@ -1,35 +1,55 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
     MoreVertical,
-    Eye,
-    Edit,
+    FileSearch,
+    FileEdit,
     Trash,
     Layers,
     FileText,
     Hash,
-    FileSearch,
-    FileEdit,
     Cog
 } from "lucide-react";
-
 import CreateVersionModal from "./CreateVersionModal";
+import { useNavigate } from "react-router-dom";
 
-const ViewCertificateVersions = ({ certificate, activityName, token, onBack,onVersionCreated  }) => {
-const [showModal, setShowModal] = useState(false);
-
+const ViewCertificateVersions = ({ certificate, activityName, token, onBack, onVersionCreated }) => {
+    const navigate = useNavigate();
     const [menuOpen, setMenuOpen] = useState(null);
     const [versionData, setVersionData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [showCreateVersion, setShowCreateVersion] = useState(false);
-
     const [message, setMessage] = useState("");   // ✅ SUCCESS / ERROR MESSAGES
-
     const menuRef = useRef(null);
 
     useEffect(() => {
-        setVersionData(certificate);
-        setLoading(false);
-    }, [certificate]);
+        const fetchVersions = async () => {
+            try {
+                const res = await fetch(
+                    `http://127.0.0.1:8000/admin/certificate-versions/${certificate.certificate_id}`,
+                    {
+                        headers: {
+                            "Authorization": `Bearer ${token}`,
+                        }
+                    }
+                );
+                const data = await res.json();
+
+                setVersionData({
+                    certificate_id: data.certificate_id,
+                    certificate_name: data.certificate_name,
+                    activity_name: data.activity_name,
+                    versions: Array.isArray(data.versions) ? data.versions : [],
+                });
+
+            } catch (err) {
+                console.error("Error fetching versions", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchVersions();
+    }, [certificate, token]);
 
     useEffect(() => {
         const handleClickOutside = (e) => {
@@ -44,38 +64,17 @@ const [showModal, setShowModal] = useState(false);
     if (loading) return <div className="p-6">Loading...</div>;
     if (!versionData) return <div className="p-6">No version data found.</div>;
 
-    const certificateDetails = {
-        name: versionData.certificate_name,
-        versions: versionData.versions.map((v) => ({
-            version_id: v.version_id,         // 🔴 VERY IMPORTANT
-            orientation: v.orientation,
-            issue: v.issue_date,
-            validity: v.validity_date,
-            variables: v.variables.join(", "),
-            status: v.is_active ? "Active" : "Inactive",
-        })),
-    };
-
     const addTwoMonths = (dateStr) => {
         const date = new Date(dateStr);
         date.setMonth(date.getMonth() + 2);
         return date.toISOString().split("T")[0];
     };
 
-    const handleVersionCreated = (newVersion) => {
-        setVersionData({
-            ...versionData,
-            versions: [...versionData.versions, newVersion],
-        });
-        setShowCreateVersion(false);
-    };
-
-    // =================================================
-    //     🔥 DELETE VERSION FUNCTION HERE
-    // =================================================
+    // ---------------------------------------------------------
+    // 🔥 DELETE VERSION
+    // ---------------------------------------------------------
     const deleteVersion = async (versionId) => {
-        const confirmDelete = window.confirm("Are you sure you want to delete this version?");
-        if (!confirmDelete) return;
+        if (!window.confirm("Are you sure you want to delete this version?")) return;
 
         try {
             const response = await fetch(
@@ -89,34 +88,41 @@ const [showModal, setShowModal] = useState(false);
                 }
             );
 
-            if (!response.ok) {
-                throw new Error("Failed to delete the version.");
-            }
+            if (!response.ok) throw new Error("Failed to delete version.");
 
-            // SUCCESS MESSAGE
             setMessage("Version deleted successfully!");
-
-            // Remove version from UI instantly
             setVersionData((prev) => ({
                 ...prev,
-                versions: prev.versions.filter((v) => v.version_id !== versionId)
+                versions: prev.versions.filter(v => v.version_id !== versionId)
             }));
 
-            setMenuOpen(null); // Close menu
-
-            // Hide message after 2 seconds
+            setMenuOpen(null);
             setTimeout(() => setMessage(""), 2000);
-
         } catch (error) {
             setMessage("Error deleting version!");
             setTimeout(() => setMessage(""), 2000);
         }
     };
 
+    // ---------------------------------------------------------
+    // ⭐ Preview Certificate
+    // ---------------------------------------------------------
+    const handlePreview = (version) => {
+        window.open(`/admin/cert-preview/${version.version_id}`, "_blank");
+    };
+
+    // ---------------------------------------------------------
+    // ⭐ Edit Template
+    // ---------------------------------------------------------
+    const handleEditTemplate = (certificate, version) => {
+        const certificateId = certificate.certificate_id;
+        const versionId = version.version_id;
+
+        navigate(`/admin/cert-editor/${certificateId}/${versionId}`);
+    };
+
     return (
         <div className="p-6">
-
-            {/* SUCCESS / ERROR toast message */}
             {message && (
                 <div className="mb-4 p-3 text-white bg-green-600 rounded-lg shadow">
                     {message}
@@ -153,7 +159,7 @@ const [showModal, setShowModal] = useState(false);
                     <FileText size={28} className="text-purple-600" />
                     <div>
                         <p className="text-gray-500 text-sm">Certificate Name</p>
-                        <p className="text-xl font-semibold">{certificateDetails.name}</p>
+                        <p className="text-xl font-semibold">{versionData.certificate_name}</p>
                     </div>
                 </div>
 
@@ -182,43 +188,29 @@ const [showModal, setShowModal] = useState(false);
                 </thead>
 
                 <tbody>
-                    {certificateDetails.versions.map((v, index) => (
+                    {versionData.versions.map((v, index) => (
                         <tr key={index} className="border-b hover:bg-gray-50 transition">
+                            <td className="p-3">{v.orientation === "horizontal" ? "Landscape" : "Portrait"}</td>
+                            <td className="p-3">{v.issue_date}</td>
+                            <td className="p-3">{v.validity_date || addTwoMonths(v.issue_date)}</td>
+                            <td className="p-3">{v.variables.join(", ")}</td>
                             <td className="p-3">
-                                {v.orientation === "horizontal" ? "Landscape" : "Portrait"}
-                            </td>
-
-                            <td className="p-3">{v.issue}</td>
-                            <td className="p-3">{v.validity || addTwoMonths(v.issue)}</td>
-                            <td className="p-3">{v.variables}</td>
-
-                            <td className="p-3">
-                                <span
-                                    className={`px-3 py-1 text-white rounded text-sm ${v.status === "Active" ? "bg-green-600" : "bg-gray-500"
-                                        }`}
-                                >
-                                    {v.status}
+                                <span className={`px-3 py-1 text-white rounded text-sm ${v.is_active ? "bg-green-600" : "bg-gray-500"}`}>
+                                    {v.is_active ? "Active" : "Inactive"}
                                 </span>
                             </td>
-
                             <td className="p-3 relative">
-                                <button
-                                    onClick={() => setMenuOpen(menuOpen === index ? null : index)}
-                                    className="hover:text-blue-600"
-                                >
+                                <button onClick={() => setMenuOpen(menuOpen === index ? null : index)} className="hover:text-blue-600">
                                     <MoreVertical size={20} />
                                 </button>
 
                                 {menuOpen === index && (
-                                    <div
-                                        ref={menuRef}
-                                        className="absolute right-10 bg-white shadow-xl rounded-md p-2 w-48 z-[99999] border"
-                                    >
-                                        <button className="flex items-center gap-2 p-2 hover:bg-gray-100">
+                                    <div ref={menuRef} className="absolute right-10 bg-white shadow-xl rounded-md p-2 w-48 z-[99999] border">
+                                        <button onClick={() => handlePreview(v)} className="flex items-center gap-2 p-2 hover:bg-gray-100">
                                             <FileSearch size={16} /> Preview Certificate
                                         </button>
 
-                                        <button className="flex items-center gap-2 p-2 hover:bg-gray-100">
+                                        <button onClick={() => handleEditTemplate(certificate, v)} className="flex items-center gap-2 p-2 hover:bg-gray-100">
                                             <FileEdit size={16} /> Edit Template
                                         </button>
 
@@ -226,11 +218,7 @@ const [showModal, setShowModal] = useState(false);
                                             <Cog size={16} /> Edit Template Details
                                         </button>
 
-                                        {/* 🔥 DELETE VERSION */}
-                                        <button
-                                            onClick={() => deleteVersion(v.version_id)}
-                                            className="flex items-center gap-2 p-2 hover:bg-gray-100 text-red-600"
-                                        >
+                                        <button onClick={() => deleteVersion(v.version_id)} className="flex items-center gap-2 p-2 hover:bg-gray-100 text-red-600">
                                             <Trash size={16} /> Delete Certificate
                                         </button>
                                     </div>
@@ -242,16 +230,17 @@ const [showModal, setShowModal] = useState(false);
             </table>
 
             {/* Create Version Modal */}
-            <CreateVersionModal
-  certificateId={certificate.certificate_id}
-  certificateName={certificate.certificate_name}
-  token={token}
-  onClose={() => setShowModal(false)}
-  onCreated={(versionId) => {
-      onVersionCreated(versionId, certificate.certificate_name);
-  }}
-/>
-
+            {showCreateVersion && (
+                <CreateVersionModal
+                    certificateId={certificate.certificate_id}
+                    certificateName={certificate.certificate_name}
+                    token={token}
+                    onClose={() => setShowCreateVersion(false)}
+                    onCreated={(versionId) => {
+                        onVersionCreated(versionId, certificate.certificate_name);
+                    }}
+                />
+            )}
         </div>
     );
 };

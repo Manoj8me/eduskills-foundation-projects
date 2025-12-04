@@ -17,7 +17,7 @@ const CertificateManager = () => {
   const [activityScreen, setActivityScreen] = useState("list"); // list | certificates | versions | form
   const [selectedActivity, setSelectedActivity] = useState(null);
   const [selectedCertificate, setSelectedCertificate] = useState(null);
-
+const [selectedVersionData, setSelectedVersionData] = useState(null);
   // Dashboard cards
   const [cards, setCards] = useState([]);
 
@@ -25,7 +25,9 @@ const CertificateManager = () => {
     setCards((prev) => [newCard, ...prev]);
     setActivityScreen("list");
   };
-
+const handleViewVersions = (data) => {
+    setSelectedVersionData(data);
+};
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       {/* ------------------ PAGE TABS ------------------ */}
@@ -103,7 +105,8 @@ const CertificateManager = () => {
   activityName={selectedActivity?.activity_name}
   certificate={selectedCertificate}
   onBack={() => setActivityScreen("certificates")}
-  token={token}
+          token={token}
+          versionData={selectedVersionData}
   onVersionCreated={(versionId, certificateName) => {
     navigate(
       `/certificate-canvas?version_id=${versionId}&certificateName=${certificateName}`

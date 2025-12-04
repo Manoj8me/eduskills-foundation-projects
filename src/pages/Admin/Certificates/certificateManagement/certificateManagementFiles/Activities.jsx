@@ -8,6 +8,16 @@ const Activities = ({ onCreate, onViewCertificates, token }) => {
     const [rowsPerPage, setRowsPerPage] = useState(3);
     const [currentPage, setCurrentPage] = useState(1);
 
+    // For Edit Modal
+    const [editModalOpen, setEditModalOpen] = useState(false);
+    const [editActivity, setEditActivity] = useState(null);
+    const [newActivityName, setNewActivityName] = useState("");
+
+    // For Delete Confirmation Modal
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [deleteActivityId, setDeleteActivityId] = useState(null);
+
+    // Fetch activities
     const fetchActivities = async () => {
         try {
             const response = await fetch(`${BASE_URL}/admin/activities-details`, {
@@ -17,7 +27,6 @@ const Activities = ({ onCreate, onViewCertificates, token }) => {
                     Authorization: `Bearer ${token}`,
                 },
             });
-
             const data = await response.json();
             setActivities(data);
         } catch (error) {
@@ -33,12 +42,67 @@ const Activities = ({ onCreate, onViewCertificates, token }) => {
     const start = (currentPage - 1) * rowsPerPage;
     const visibleCards = activities.slice(start, start + rowsPerPage);
 
+    // Handle Edit
+    const openEditModal = (activity) => {
+        setEditActivity(activity);
+        setNewActivityName(activity.activity_name);
+        setEditModalOpen(true);
+    };
+
+    const submitEdit = async () => {
+        try {
+            const res = await fetch(`${BASE_URL}/admin/update-activity`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    activity_id: editActivity.activity_id,
+                    activity_name: newActivityName,
+                }),
+            });
+
+            if (!res.ok) throw new Error("Failed to update activity");
+
+            setEditModalOpen(false);
+            fetchActivities(); // refresh the list
+        } catch (err) {
+            console.error("Error updating activity:", err);
+        }
+    };
+
+    // Handle Delete
+    const openDeleteModal = (activityId) => {
+        setDeleteActivityId(activityId);
+        setDeleteModalOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        try {
+            const res = await fetch(
+                `${BASE_URL}/admin/delete-activity/${deleteActivityId}`,
+                {
+                    method: "DELETE",
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            );
+
+            if (!res.ok) throw new Error("Failed to delete activity");
+
+            setDeleteModalOpen(false);
+            fetchActivities(); // refresh list
+        } catch (err) {
+            console.error("Error deleting activity:", err);
+        }
+    };
+
     return (
         <div className="p-6">
-
             <div className="flex justify-between items-start mb-6">
                 <h1 className="text-2xl font-bold">Activities</h1>
-
                 <button
                     onClick={onCreate}
                     className="bg-blue-600 text-white px-4 py-2 rounded"
@@ -67,13 +131,10 @@ const Activities = ({ onCreate, onViewCertificates, token }) => {
                     >
                         <div className="flex items-start gap-4">
                             <FaAward className="text-yellow-500 text-4xl" />
-
                             <div>
                                 <p className="font-semibold">{activity.activity_name}</p>
-
                                 <div className="flex gap-6 mt-1 text-gray-600">
                                     <span>{activity.certificates_count} Certificates</span>
-
                                     <span className="flex items-center gap-1">
                                         <MdCalendarToday /> {activity.created_date}
                                     </span>
@@ -83,17 +144,23 @@ const Activities = ({ onCreate, onViewCertificates, token }) => {
 
                         <div className="flex items-center gap-3">
                             <button
-                                onClick={() => onViewCertificates(activity)}   // pass entire activity object
+                                onClick={() => onViewCertificates(activity)}
                                 className="bg-blue-600 text-white px-3 py-1 rounded flex items-center gap-1"
                             >
                                 View Certificates <FaArrowRight />
                             </button>
 
-                            <button className="text-gray-500">
+                            <button
+                                className="text-gray-500"
+                                onClick={() => openEditModal(activity)}
+                            >
                                 <FaEdit />
                             </button>
 
-                            <button className="text-gray-500">
+                            <button
+                                className="text-gray-500"
+                                onClick={() => openDeleteModal(activity.activity_id)}
+                            >
                                 <FaTrash />
                             </button>
                         </div>
@@ -123,7 +190,6 @@ const Activities = ({ onCreate, onViewCertificates, token }) => {
 
                     <div className="flex items-center gap-3">
                         <span>Rows per page:</span>
-
                         <select
                             value={rowsPerPage}
                             onChange={(e) => {
@@ -136,10 +202,63 @@ const Activities = ({ onCreate, onViewCertificates, token }) => {
                             <option value={5}>5</option>
                             <option value={10}>10</option>
                         </select>
-
                         <span>
                             Page {currentPage} of {totalPages}
                         </span>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Modal */}
+            {editModalOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                    <div className="bg-white p-6 rounded shadow-md w-96">
+                        <h2 className="text-lg font-semibold mb-4">Edit Activity</h2>
+                        <input
+                            type="text"
+                            value={newActivityName}
+                            onChange={(e) => setNewActivityName(e.target.value)}
+                            className="w-full border px-3 py-2 rounded mb-4"
+                        />
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => setEditModalOpen(false)}
+                                className="px-4 py-2 rounded bg-gray-200"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={submitEdit}
+                                className="px-4 py-2 rounded bg-blue-600 text-white"
+                            >
+                                Submit
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {deleteModalOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                    <div className="bg-white p-6 rounded shadow-md w-96">
+                        <h2 className="text-lg font-semibold mb-4">
+                            Are you sure you want to delete this activity?
+                        </h2>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => setDeleteModalOpen(false)}
+                                className="px-4 py-2 rounded bg-gray-200"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmDelete}
+                                className="px-4 py-2 rounded bg-red-600 text-white"
+                            >
+                                Delete
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
